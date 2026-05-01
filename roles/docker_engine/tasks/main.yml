@@ -1,0 +1,91 @@
+---
+- name: Install dependensi apt
+  apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+      - ufw
+    state: present
+    update_cache: yes
+
+- name: Tambahkan GPG key Docker
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+
+- name: Tambahkan repository Docker
+  apt_repository:
+    repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+    state: present
+    filename: docker
+
+- name: Install Docker Engine
+  apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-compose-plugin
+    state: present
+    update_cache: yes
+
+- name: Tambahkan user ubuntu ke group docker
+  user:
+    name: ubuntu
+    groups: docker
+    append: yes
+
+- name: Buat direktori konfigurasi Docker
+  file:
+    path: /etc/docker
+    state: directory
+    mode: '0755'
+
+- name: Set storage driver VFS untuk Docker in Docker
+  copy:
+    dest: /etc/docker/daemon.json
+    content: |
+      {
+        "storage-driver": "vfs",
+        "features": {
+          "containerd-snapshotter": false
+        }
+      }
+    mode: '0644'
+
+- name: Jalankan Docker daemon di background
+  shell: |
+    if ! pgrep -x dockerd > /dev/null; then
+      nohup dockerd > /var/log/dockerd.log 2>&1 &
+    fi
+  changed_when: false
+
+- name: Tunggu Docker socket siap
+  wait_for:
+    path: /var/run/docker.sock
+    timeout: 60
+
+- name: Setup firewall - izinkan port 22
+  ufw:
+    rule: allow
+    port: "22"
+    proto: tcp
+
+- name: Aktifkan firewall
+  ufw:
+    state: enabled
+    policy: deny
+  ignore_errors: yes
+
+- name: Verifikasi Docker berfungsi
+  command: docker run --rm hello-world
+  register: docker_test
+  changed_when: false
+
+- name: Tampilkan hasil verifikasi Docker
+  debug:
+    msg: "Docker berhasil terinstall di {{ inventory_hostname }}"
+  when: docker_test.rc == 0
