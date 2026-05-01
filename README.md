@@ -11,10 +11,23 @@ ansible-praktikum/
 ├── ansible.cfg
 ├── inventory.yml
 ├── site.yml
+├── group_vars/
+│   └── backend/
+│       └── vars.yml
+├── backend/            # Source code backend (Simulasi)
+│   ├── index.js
+│   ├── package.json
+│   └── Dockerfile
 └── roles/
-    └── docker_engine/
-        └── tasks/
-            └── main.yml
+    ├── docker_engine/
+    │   └── tasks/
+    │       └── main.yml
+    └── backend_deploy/ # Hasil Praktikan 2
+        ├── tasks/
+        │   └── main.yml
+        └── templates/
+            ├── .env.j2
+            └── docker-compose.yml.j2
 ```
 
 ---
@@ -27,6 +40,19 @@ ansible-praktikum/
 - Menjalankan playbook ke semua node — Docker berhasil terinstall di node1 dan node2
 - Setup firewall UFW dengan hanya port 22 yang terbuka
 - Verifikasi `docker run hello-world` berhasil di kedua node
+
+---
+
+## Apa yang Sudah Dikerjakan Praktikan 2
+
+- Membuat role `backend_deploy` khusus untuk deploy backend dan database Postgres
+- Menyiapkan variabel di `group_vars/backend/vars.yml` (DB name, user, password, port, jwt secret)
+- Menyiapkan Dockerfile untuk backend (Node.js)
+- Menyiapkan template Jinja2 untuk `.env` dan `docker-compose.yml`
+- Membuka port backend (3000) di firewall UFW
+- Menjalankan backend menggunakan Docker Compose (Postgres + Node.js Backend)
+- Menambahkan health check otomatis menggunakan modul `uri` di Ansible
+- Memodifikasi `site.yml` untuk menjalankan role `backend_deploy` pada group `backend`
 
 ---
 
@@ -207,6 +233,7 @@ Kalau muncul `Hello from Docker!` di kedua node, setup Praktikan 1 sudah berhasi
 - `backend_url` menggunakan template berdasarkan Ansible inventory — **jangan hardcode IP**
 - Setelah role selesai, **modifikasi `site.yml`** dengan menambahkan play baru khusus group `frontend`
 - Tunggu Praktikan 2 selesai deploy backend sebelum mengisi `backend_url`
+- **PENTING**: Gunakan IP `node1` dari inventory untuk `backend_url`. Karena kita menggunakan port mapping Docker, gunakan `http://127.0.0.1:3000` jika diakses dari host, atau `http://<IP_NODE1>:3000` jika diakses antar container (namun karena ini simulasi port mapping, sesuaikan dengan instruksi modul).
 
 ---
 

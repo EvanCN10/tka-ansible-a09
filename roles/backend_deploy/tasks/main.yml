@@ -1,0 +1,53 @@
+---
+- name: Allow backend port in UFW
+  ufw:
+    rule: allow
+    port: "{{ backend_port }}"
+    proto: tcp
+
+- name: Create backend directory on remote
+  file:
+    path: /home/ubuntu/backend_app
+    state: directory
+    mode: '0755'
+
+- name: Create backend source directory on remote
+  file:
+    path: /home/ubuntu/backend_app/backend
+    state: directory
+    mode: '0755'
+
+- name: Synchronize backend source code
+  copy:
+    src: backend/
+    dest: /home/ubuntu/backend_app/backend/
+
+- name: Deploy .env file from template
+  template:
+    src: .env.j2
+    dest: /home/ubuntu/backend_app/backend/.env
+    mode: '0600'
+
+- name: Deploy docker-compose.yml from template
+  template:
+    src: docker-compose.yml.j2
+    dest: /home/ubuntu/backend_app/docker-compose.yml
+
+- name: Start backend with Docker Compose
+  shell: docker compose up -d --build
+  args:
+    chdir: /home/ubuntu/backend_app
+
+- name: Wait for backend to be healthy
+  uri:
+    url: "http://localhost:{{ backend_port }}/health"
+    method: GET
+    status_code: 200
+  register: health_check
+  until: health_check.status == 200
+  retries: 10
+  delay: 5
+
+- name: Show health check status
+  debug:
+    msg: "Backend is healthy: {{ health_check.json }}"

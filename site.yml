@@ -4,3 +4,9 @@
   become: true
   roles:
     - role: docker_engine
+
+- name: Deploy Backend ke group backend
+  hosts: backend
+  become: true
+  roles:
+    - role: backend_deploy
